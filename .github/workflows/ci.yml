@@ -30,11 +30,11 @@ jobs:
       - run: dotnet test ${{ github.workspace }}/src --no-build
 
       - run: >- 
-          docker build ${{ github.workspace }}/src/Ursa 
-            -t ursa:${{ steps.version_step.outputs.majorMinorPatch }}
-            -t ursa:${{ steps.version_step.outputs.major }}
-            -t ursa:${{ steps.version_step.outputs.major }}.${{ steps.version_step.outputs.minor }}
-            -t ursa:latest
+          docker build ${{ github.workspace }}/src/Ursa
+          -t ursa:${{ steps.version_step.outputs.majorMinorPatch }}
+          -t ursa:${{ steps.version_step.outputs.major }}
+          -t ursa:${{ steps.version_step.outputs.major }}.${{ steps.version_step.outputs.minor }}
+          -t ursa:latest
 
   # push:
   #   name: Push images
