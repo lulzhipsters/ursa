@@ -1,0 +1,20 @@
+name: images
+on:
+  workflow_run:
+    workflows: [ci]
+    types:
+      - completed
+jobs:
+  build:
+    name: Build images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build $GITHUB_WORKSPACE/src/Ursa
+  
+  # push:
+  #   name: Push images
+  #   runs-on: ubuntu-latest
+  #   if: ${{ github.ref == 'refs/heads/main' }}
+  #   steps:
+  #     - run: docker push
