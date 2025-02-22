@@ -16,10 +16,14 @@ jobs:
       
       - run: dotnet test ${{ github.workspace }}/src --no-build
 
-  build_and_push_images:
-    name: Build and push container images
+  build_images:
+    name: Build container images
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v3.1.11
         with:
