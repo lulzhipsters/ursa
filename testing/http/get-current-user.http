@@ -1,0 +1,3 @@
+GET http://localhost:5555/users/current
+Content-Type: application/json
+Authorization: Bearer TddazmN5CCbCINr49m6BBBETtN5p5ZFG99TU/HqOPkA=

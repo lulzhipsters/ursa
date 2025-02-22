@@ -1,0 +1,12 @@
+POST http://localhost:5555/admin/commands/create-token
+Content-Type: application/json
+
+{
+    "expires": "2026-01-01T00:00:00Z",
+    "userId": "1",
+    "metadata": {
+        "test": true,
+        "requestedBy": "test",
+        "x": 3
+    }
+}

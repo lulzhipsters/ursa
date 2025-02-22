@@ -1,0 +1,24 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+
+COPY . /src
+WORKDIR /src
+
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    dotnet publish . \
+    -c Release \
+    -o /app
+
+WORKDIR /app
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS run
+
+COPY --from=build /app /app
+
+RUN echo "dotnet /app/Ursa.dll marten-apply" > /migrate.sh
+RUN chmod +x /migrate.sh
+
+RUN echo "dotnet /app/Ursa.dll" > /run.sh
+RUN chmod +x /run.sh
+
+ENTRYPOINT ["/bin/bash"]
+CMD [ "./run.sh" ]

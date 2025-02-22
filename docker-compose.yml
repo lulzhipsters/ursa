@@ -1,0 +1,27 @@
+services:
+
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    shm_size: 128mb
+    ports: 
+      - 5432:5432
+    volumes:
+      - "./db/init.sql:/docker-entrypoint-initdb.d/init.sql"
+    environment:
+      POSTGRES_DB: ursa
+      POSTGRES_PASSWORD: develop
+      POSTGRES_USER: ursa-dev
+
+  ursa:
+    depends_on:
+      - postgres
+    build:
+      context: ./src/Ursa/
+      dockerfile: dockerfile
+    restart: no
+    ports:
+      - "5555:8080"
+    environment:
+      URSA_DATABASE_CONNECTION: "Host=postgres; Port=5432; Database=ursa; Username=ursa-dev; Password=develop; Persist Security Info=true;"
+    
