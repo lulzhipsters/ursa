@@ -6,9 +6,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup dotnet
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 8.x
+
       - run: dotnet build ${{ github.workspace }}/src
+      
       - run: dotnet test ${{ github.workspace }}/src --no-build
