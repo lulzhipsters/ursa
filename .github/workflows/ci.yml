@@ -1,5 +1,9 @@
 name: ci
 on: [push]
+
+env:
+  IMAGE_ID: ghcr.io/lulzhipsters/ursa
+
 jobs:
   build_and_test:
     name: Build and test application
@@ -31,10 +35,10 @@ jobs:
 
       - run: >- 
           docker build ${{ github.workspace }}/src/Ursa
-          -t ursa:${{ steps.version_step.outputs.majorMinorPatch }}
-          -t ursa:${{ steps.version_step.outputs.major }}
-          -t ursa:${{ steps.version_step.outputs.major }}.${{ steps.version_step.outputs.minor }}
-          -t ursa:latest
+          -t $IMAGE_ID:${{ steps.version_step.outputs.majorMinorPatch }}
+          -t $IMAGE_ID:${{ steps.version_step.outputs.major }}
+          -t $IMAGE_ID:${{ steps.version_step.outputs.major }}.${{ steps.version_step.outputs.minor }}
+          -t $IMAGE_ID:latest
 
   # push:
   #   name: Push images
