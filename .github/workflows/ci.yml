@@ -4,6 +4,10 @@ on: [push, pull_request]
 env:
   IMAGE_ID: ghcr.io/lulzhipsters/ursa
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build_test_push:
     name: Build and test application
