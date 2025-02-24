@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using JasperFx.Core;
 using Testcontainers.PostgreSql;
 using Ursa.API;
 
@@ -6,26 +7,25 @@ namespace Ursa.Tests;
 
 public class CreateAccessTokenTests : IClassFixture<ApplicationFixture>
 {
+    private const string User = "mario";
+
     private readonly ApplicationFactory _appFactory;
-    private readonly PostgreSqlContainer _database;
 
     public CreateAccessTokenTests(ApplicationFixture fixture)
     {
         _appFactory = fixture.AppFactory!;
-        _database = fixture.Database;
     }
 
     [Fact]
-    public async Task Handler_WhenCommandIsValid_ThenTokenIsCreated()
+    public async Task API_WhenCommandIsValid_ThenTokenIsCreated()
     {
         // Arrange
-        var userId = "user123";
         var expires = DateTimeOffset.UtcNow.AddHours(1);
         var metadata = new Dictionary<string, object> { { "key", "value" } };
         var command = new CreateAccessToken.Command(expires, metadata);
 
         var client = _appFactory.CreateClient();
-        client.DefaultRequestHeaders.Add(Headers.XUser, userId);
+        client.DefaultRequestHeaders.Add(Headers.XUser, User);
 
         // Act
         var response = await client.PostAsJsonAsync(APIRoutes.CreateToken, command);
@@ -49,98 +49,51 @@ public class CreateAccessTokenTests : IClassFixture<ApplicationFixture>
         Assert.Equal("value", token.Metadata["key"].ToString());
     }
 
+   [Fact]
+    public async Task API_WhenExpiryIsInPast_ThenReturnBadRequest()
+    {
+        // Arrange
+        var metadataId = Guid.NewGuid().ToString(); // use this Id to assert token wasn't created from *this* run
+        var expires = DateTimeOffset.UtcNow.AddHours(-1); // Invalid: expiration in the past
+        var command = new CreateAccessToken.Command(expires, new() { { "id", metadataId } });
 
-    // [Theory]
-    // [InlineData("")]
-    // [InlineData(null)]
-    // public async Task Handler_WhenUserIdIsEmpty_ThenReturnsBadRequest(string? userId)
-    // {
-    //     // Arrange
-    //     var command = new CreateAccessToken.Command(DateTimeOffset.UtcNow.AddHours(1), []);
+        var client = _appFactory.CreateClient();
+        client.DefaultRequestHeaders.Add(Headers.XUser, User);
 
-    //     // Act
-    //     var result = await CreateAccessToken.Handler(userId, command, _store);
+        // Act
+        var response = await client.PostAsJsonAsync(APIRoutes.CreateToken, command);
 
-    //     // Assert
-    //     Assert.IsType<BadRequest>(result.Result);
+        // Assert
+        await AssertNotCreated(metadataId, client, response);
+    }
 
-    //     await _session.DidNotReceive()
-    //         .SaveChangesAsync(Arg.Any<CancellationToken>());
+    [Fact]
+    public async Task API_WhenNoUserHeader_ThenReturnBadRequest()
+    {
+        // Arrange
+        var metadataId = Guid.NewGuid().ToString(); // use this Id to assert token wasn't created from *this* run
+        var expires = DateTimeOffset.UtcNow.AddHours(1);
+        var command = new CreateAccessToken.Command(expires, new() { { "id", metadataId } });
 
-    //     _session.DidNotReceive()
-    //         .Store(Arg.Any<AccessToken>());
-    // }
-
-    // [Fact]
-    // public async Task AdminHandler_WhenCommandIsValid_ThenTokenIsCreated()
-    // {
-    //     // Arrange
-    //     var userId = "user123";
-    //     var expires = DateTimeOffset.UtcNow.AddHours(1);
-    //     var metadata = new Dictionary<string, object> { { "key", "value" } };
-    //     var command = new CreateAccessToken.AdminCommand(expires, userId, metadata);
-
-    //     // Act
-    //     var result = await CreateAccessToken.AdminHandler(command, _store);
-
-    //     // Assert
-    //     var okResult = Assert.IsType<Ok<CreateAccessToken.View>>(result.Result);
-    //     Assert.NotEqual(Guid.Empty, okResult.Value!.TokenId);
-    //     Assert.NotNull(okResult.Value.Token);
-    //     Assert.NotEmpty(okResult.Value.Token);
-    //     Assert.Equal(expires, okResult.Value.Expires);
-
-    //     await _session.Received(1)
-    //         .SaveChangesAsync(Arg.Any<CancellationToken>());
-
-    //     _session.Received(1)
-    //         .Store(Arg.Is<AccessToken>(t => 
-    //             t.UserId == userId && 
-    //             t.Expires == expires));
-    // }
-
-    // [Theory]
-    // [InlineData("")]
-    // [InlineData(null)]
-    // public async Task AdminHandler_WhenUserIdIsEmpty_ThenReturnsBadRequest(string? userId)
-    // {
-    //     // Arrange
-    //     var command = new CreateAccessToken.AdminCommand(DateTimeOffset.UtcNow.AddHours(1), userId, []);
-
-    //     // Act
-    //     var result = await CreateAccessToken.AdminHandler(command, _store);
-
-    //     // Assert
-    //     Assert.IsType<BadRequest>(result.Result);
+        var client = _appFactory.CreateClient(); // Intentionally not adding the X-User header
         
-    //     await _session.DidNotReceive()
-    //         .SaveChangesAsync(Arg.Any<CancellationToken>());
+        // Act
+        var response = await client.PostAsJsonAsync(APIRoutes.CreateToken, command);
 
-    //     _session.DidNotReceive()
-    //         .Store(Arg.Any<AccessToken>());
-    // }
+        // Assert
+        await AssertNotCreated(metadataId, client, response);
+    }
 
-    // [Fact]
-    // public void View_Constructor_MapsPropertiesCorrectly()
-    // {
-    //     // Arrange
-    //     var tokenId = Guid.NewGuid();
-    //     var rawToken = "test-token";
-    //     var expires = DateTimeOffset.UtcNow.AddHours(1);
-    //     var token = new AccessToken
-    //     {
-    //         TokenId = tokenId,
-    //         UserId = "user123",
-    //         RawToken = rawToken,
-    //         Expires = expires,
-    //     };
+    private static async Task AssertNotCreated(string metadataId, HttpClient client, HttpResponseMessage response)
+    {
+        var userTokens = await client.GetUserTokens(User);
+        var token = userTokens.FirstOrDefault(t => t.Metadata!.GetValueOrDefault("id")?.ToString() == metadataId);
 
-    //     // Act
-    //     var view = new CreateAccessToken.View(token);
+        // Assert
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotNull(userTokens);
+        Assert.Null(token);
+    }
 
-    //     // Assert
-    //     Assert.Equal(tokenId, view.TokenId);
-    //     Assert.Equal(rawToken, view.Token);
-    //     Assert.Equal(expires, view.Expires);
-    // }
+    private record TestToken(string Token, Guid TokenId, DateTimeOffset Expires);
 }

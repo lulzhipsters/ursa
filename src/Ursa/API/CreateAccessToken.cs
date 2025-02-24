@@ -32,26 +32,34 @@ public static class CreateAccessToken
         public DateTimeOffset Expires { get; set; }
     }
 
-    public static Task<Results<Ok<View>, BadRequest, UnauthorizedHttpResult>> Handler(
+    public static Task<Results<Ok<View>, BadRequest<string>, UnauthorizedHttpResult>> Handler(
         [FromHeader(Name = "X-User")] string userId,
         [FromBody] Command command,
-        [FromServices] IDocumentStore store) 
-        => CreateToken(userId, command.Expires, command.Metadata, store);
+        [FromServices] IDocumentStore store,
+        [FromServices] TimeProvider time) 
+        => CreateToken(userId, command.Expires, command.Metadata, store, time);
 
-    public static Task<Results<Ok<View>, BadRequest, UnauthorizedHttpResult>> AdminHandler(
+    public static Task<Results<Ok<View>, BadRequest<string>, UnauthorizedHttpResult>> AdminHandler(
         [FromBody] AdminCommand command,
-        [FromServices] IDocumentStore store) 
-        => CreateToken(command.UserId, command.Expires, command.Metadata, store);
+        [FromServices] IDocumentStore store,
+        [FromServices] TimeProvider time) 
+        => CreateToken(command.UserId, command.Expires, command.Metadata, store, time);
 
-    private static async Task<Results<Ok<View>, BadRequest, UnauthorizedHttpResult>> CreateToken(
+    private static async Task<Results<Ok<View>, BadRequest<string>, UnauthorizedHttpResult>> CreateToken(
         string userId,
         DateTimeOffset expires,
         Dictionary<string, object> metadata,
-        IDocumentStore store)
+        IDocumentStore store,
+        TimeProvider time)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
-            return TypedResults.BadRequest();
+            return TypedResults.BadRequest("UserId must be provided");
+        }
+
+        if (expires < time.GetUtcNow())
+        {
+            return TypedResults.BadRequest("Expiry is in the past");
         }
 
         using var db = store.LightweightSession();

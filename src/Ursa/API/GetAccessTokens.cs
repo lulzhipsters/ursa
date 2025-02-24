@@ -17,12 +17,12 @@ public static class GetAccessTokens
 
         public View(IReadOnlyList<AccessToken> tokens)
         {
-            Tokens = [.. tokens.Select(t => new ViewToken(t.TokenId, t.MaskedToken, t.Expires, t.Metadata))];
+            Tokens = [.. tokens.Select(t => new ViewToken(t.UserId, t.TokenId, t.MaskedToken, t.Expires, t.Metadata))];
         }
 
         public List<ViewToken> Tokens { get; set; } = [];
 
-        public record ViewToken(Guid TokenId, string MaskedToken, DateTimeOffset Expires, Dictionary<string, object> Metadata);
+        public record ViewToken(string UserId, Guid TokenId, string MaskedToken, DateTimeOffset Expires, Dictionary<string, object> Metadata);
     }
 
     public static Task<Ok<View>> Handler(
