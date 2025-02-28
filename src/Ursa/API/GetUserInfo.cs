@@ -10,24 +10,25 @@ public static class GetUserInfo
 {
     public record View
     {
-        private View(AccessToken? token = null)
+        [JsonConstructor]
+        public View()
+        {
+        }
+
+        public View(AccessToken? token = null)
         {
             UserId = token?.UserId;
             Metadata = token?.Metadata ?? [];
         }
 
-        public string? UserId { get; private set; }
+        public string? UserId { get; set; }
 
         public Dictionary<string, object> Metadata { get; set;} = [];
 
-        [JsonIgnore]
-        public bool Found => UserId is not null;
-
-        public static View NotFound() => new();
         public static View Create(AccessToken token) => new(token);
     }
 
-    public static async Task<Results<Ok<View>, NotFound>> Handler(
+    public static async Task<Results<Ok<View>, UnauthorizedHttpResult>> Handler(
         [FromHeader] string authorization,
         [FromServices] IDocumentStore store)
     {
@@ -41,7 +42,7 @@ public static class GetUserInfo
         var token = await db.Query<AccessToken>().FirstOrDefaultAsync(t => t.HashedToken == hashedToken);
 
         return token is null 
-            ? TypedResults.NotFound()
-            : TypedResults.Ok(View.Create(token));
+            ? TypedResults.Unauthorized()
+            : TypedResults.Ok(new View(token));
     }
 }

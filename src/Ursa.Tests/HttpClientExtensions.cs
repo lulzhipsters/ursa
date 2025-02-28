@@ -12,7 +12,7 @@ public static class HttpClientExtensions
         var response = await client.PostAsJsonAsync(APIRoutes.AdminCreateToken, command);
         var content = await response.Content.ReadFromJsonAsync<CreateAccessToken.View>();
 
-        return new TestToken(content.Token, content.TokenId, content.Expires, null);
+        return new TestToken(content.Token, content.TokenId, content.Expires, []);
     }
 
     public static async Task<IEnumerable<TestToken>> GetUserTokens(this HttpClient client, string userId)
@@ -21,5 +21,17 @@ public static class HttpClientExtensions
         return response.Tokens.Select(t => new TestToken(t.MaskedToken, t.TokenId, t.Expires, t.Metadata));
     }
 
-    public record TestToken(string Token, Guid TokenId, DateTimeOffset Expires, Dictionary<string, object>? Metadata);
+    public static HttpClient WithUserHeader(this HttpClient client, string userId)
+    {
+        client.DefaultRequestHeaders.Add(Headers.XUser, userId);
+        return client;
+    }
+
+    public static HttpClient WithAuthHeader(this HttpClient client, string token)
+    {
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
+        return client;
+    }
+
+    public record TestToken(string Token, Guid TokenId, DateTimeOffset Expires, Dictionary<string, object> Metadata);
 }

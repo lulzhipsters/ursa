@@ -14,12 +14,11 @@ public class GetAccessTokenTests : IClassFixture<ApplicationFixture>, IAsyncLife
     }
 
     [Fact]
-    public async Task API_WhenUserHeader_ReturnsTokens()
+    public async Task API_User_WhenUserHeader_ReturnsTokens()
     {
         // Arrange
         var user = "User123";
-        var client = _appFactory.CreateClient();
-        client.DefaultRequestHeaders.Add(Headers.XUser, user);
+        var client = _appFactory.CreateClient().WithUserHeader(user);
 
         var expectedToken = await client.CreateTestToken(user);
 
@@ -36,7 +35,7 @@ public class GetAccessTokenTests : IClassFixture<ApplicationFixture>, IAsyncLife
     }
 
     [Fact]
-    public async Task API_WhenNoUserHeader_ReturnsBadRequest()
+    public async Task API_User_WhenNoUserHeader_ReturnsBadRequest()
     {
         // Arrange
         var client = _appFactory.CreateClient();
@@ -49,7 +48,7 @@ public class GetAccessTokenTests : IClassFixture<ApplicationFixture>, IAsyncLife
     }
 
     [Fact]
-    public async Task API_WhenAdmin_ReturnsAllUserTokens()
+    public async Task API_Admin_ReturnsAllUserTokens()
     {
         // Arrange
         var client = _appFactory.CreateClient();
@@ -58,12 +57,13 @@ public class GetAccessTokenTests : IClassFixture<ApplicationFixture>, IAsyncLife
         var tokensResponse = await client.GetFromJsonAsync<GetAccessTokens.View>(APIRoutes.AdminGetTokens);
 
         // Assert
+        Assert.NotNull(tokensResponse);
         Assert.Contains(tokensResponse.Tokens, t => t.UserId == "some-guy");
         Assert.Contains(tokensResponse.Tokens, t => t.UserId == "another-guy");
     }
 
     [Fact]
-    public async Task API_WhenAdmin_AndUserFiltered_ReturnsOnlyUserTokens()
+    public async Task API_Admin_AndUserFiltered_ReturnsOnlyUserTokens()
     {
         // Arrange
         var user = "some-guy";
@@ -73,6 +73,7 @@ public class GetAccessTokenTests : IClassFixture<ApplicationFixture>, IAsyncLife
         var tokensResponse = await client.GetFromJsonAsync<GetAccessTokens.View>($"{APIRoutes.AdminGetTokens}?users={user}");
 
         // Assert
+        Assert.NotNull(tokensResponse);
         Assert.Contains(tokensResponse.Tokens, t => t.UserId == user);
         Assert.DoesNotContain(tokensResponse.Tokens, t => t.UserId == "another-guy");
     }
